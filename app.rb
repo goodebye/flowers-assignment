@@ -6,8 +6,17 @@ require "sqlite3"
 $db = SQLite3::Database.open "flowers.db"
 
 def recent_sightings_query flower_name
-  sightings = $db.execute "select * from sightings where name = \"#{flower_name}\""
-  sightings
+  
+  sightings = $db.execute %{SELECT SIGHTED, PERSON, LOCATION, NAME
+			   FROM SIGHTINGS 
+			   WHERE NAME = "#{flower_name}" or NAME = (select comname from flowers 				   WHERE genus || ' ' || species = "#{flower_name}")
+			   ORDER BY SIGHTED DESC
+			   LIMIT 10;}
+
+  if sightings.empty?
+     puts "#{flower_name} has not been sighted!"
+  else
+     sightings
 end
 
 get '/' do
