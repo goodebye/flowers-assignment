@@ -6,17 +6,20 @@ require "sqlite3"
 $db = SQLite3::Database.open "flowers.db"
 
 def recent_sightings_query flower_name
-  
   sightings = $db.execute %{SELECT SIGHTED, PERSON, LOCATION, NAME
-			   FROM SIGHTINGS 
+			   FROM SIGHTINGS
 			   WHERE NAME = "#{flower_name}" or NAME = (select comname from flowers 				   WHERE genus || ' ' || species = "#{flower_name}")
 			   ORDER BY SIGHTED DESC
 			   LIMIT 10;}
 
-  if sightings.empty?
-     puts "#{flower_name} has not been sighted!"
-  else
-     sightings
+  puts "#{flower_name} has not been sighted!" if sightings.empty?
+
+  sightings
+end
+
+def get_flower_info_query flower_name
+  flower_info = $db.execute %{select * from flowers  WHERE genus || ' ' || species = "#{flower_name}" OR COMNAME = "#{flower_name}" }
+  flower_info
 end
 
 get '/' do
@@ -39,9 +42,10 @@ get '/about' do
 end
 
 get '/flower/:flower_name' do
+  @flower = get_flower_info_query params[:flower_name]
   @sightings = recent_sightings_query params[:flower_name]
 
-  @sightings.to_s
+  [@sightings, @flower].to_s
 end
 
 post '/signup' do
