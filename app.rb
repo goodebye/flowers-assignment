@@ -7,7 +7,8 @@ db = SQLite3::Database.open "flowers.db"
 users = {}
 
 get '/' do
-  (db.execute "select * from flowers").to_s
+  @flowers = (db.execute "select * from flowers").to_s
+  erb :'index', :layout => :'layout'
 end
 
 get '/about' do
@@ -15,5 +16,8 @@ get '/about' do
 end
 
 post '/signup' do
+end
+
+post '/login' do
 
 end
