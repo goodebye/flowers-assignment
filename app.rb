@@ -5,6 +5,7 @@ require "sqlite3"
 
 $db = SQLite3::Database.open "flowers.db"
 
+# Triggers and index
 $db.execute %{CREATE INDEX location
 	        ON SIGHTINGS(LOCATION);
 
@@ -59,8 +60,43 @@ $db.execute %{CREATE INDEX location
 				              FROM FLOWERS
 				              WHERE GENUS || ' ' || SPECIES = NEW.NAME)
 				  WHERE NAME = NEW.NAME;
-		END;}
+		END;
 
+		CREATE TRIGGER ud_no_flower
+		BEFORE UPDATE ON FLOWERS
+		BEGIN
+		SELECT CASE
+		WHEN((SELECT COMNAME
+		      FROM FLOWERS
+		      WHERE COMNAME = NEW.NAME) is NULL)
+		      then
+		      RAISE(ABORT, 'Flower is not found')
+		      END;
+		END;
+
+		CREATE TRIGGER ud_no_genus
+		BEFORE UPDATE ON FLOWERS
+		BEGIN
+		SELECT CASE
+		WHEN((SELECT GENUS
+		      FROM FLOWERS
+		      WHERE GENUS = NEW.GENUS) is NULL)
+		      then
+		      RAISE(ABORT, 'Genus is not found')
+		      END;
+		END;
+
+		CREATE TRIGGER ud_no_specices
+		BEFORE UPDATE ON FLOWERS
+		BEGIN
+		SELECT CASE
+		WHEN((SELECT SPECIES
+		      FROM FLOWERS
+		      WHERE SPECIES = NEW.SPECIES) is NULL)
+		      then
+		      RAISE(ABORT, 'Species is not found')
+		      END;
+		END;}
 
 
 def recent_sightings_query flower_name
@@ -74,6 +110,29 @@ def recent_sightings_query flower_name
 
   sightings
 end
+
+# These methods assume the user cannot enter a blank input
+# Not sure if that needs to be caught here or elsewhere
+def update_flower_name(flower_name, new_name)
+  $db.execute %{UPDATE FLOWERS
+		SET COMNAME = #{new_name}
+		WHERE COMNAME = #{flower_name}}
+end
+
+
+def update_flower_genus(flower_name, genus_name)
+  $db.execute %{UPDATE FLOWERS
+		SET GENUS = #{new_name}
+		WHERE COMNAME = #{flower_name}}
+end
+
+def update_flower_species(flower_name, species_name)
+  $db.execute %{UPDATE FLOWERS
+		SET SPECIES = #{species_name}
+		WHERE COMNAME = #{flower_name}}
+end
+
+
 
 def get_flower_info_query flower_name
   flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "#{flower_name}" }
