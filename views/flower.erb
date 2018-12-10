@@ -1,0 +1,43 @@
+<div class ="row">
+    <div class="col-sm"
+        <div class="card" style="width: 18rem;">
+            <img class="card-img-top" src="<%= @flower[:image_url]%>" alt="Card image cap">
+            <div class="card-body">
+                <h5 class="card-title"><%= @flower[:common_name] %></h5>
+                <p class="card-text"><%= @flower[:latin_name]%></p>
+                <a href="#" class="btn btn-primary">Go somewhere</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm">
+        <div id="flower info">
+        <%= @flower %>
+        </div>
+
+       <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Sighting location" aria-label="Sighting location" aria-describedby="button-addon2">
+            <div class="input-group-append">
+                <button class="btn btn-outline-secondary" type="button" id="button-addon2">+</button>
+            </div>
+        </div>
+
+        <div id="sightings">
+
+        </div>
+
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-sm">
+            One of three columns
+        </div>
+        <div class="col-sm">
+            One of three columns
+        </div>
+        <div class="col-sm">
+            One of three columns
+        </div>
+    </div>
+</div>

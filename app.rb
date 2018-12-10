@@ -1,7 +1,8 @@
 require 'sinatra'
 require 'sinatra/reloader'
-require "sqlite3"
-
+require 'sqlite3'
+require 'image_searcher'
+require 'active_record'
 
 $db = SQLite3::Database.open "flowers.db"
 
@@ -99,13 +100,13 @@ $db.execute %{CREATE INDEX IF NOT EXISTS location
 
 
 def recent_sightings_query flower_name
+  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
+
   sightings = $db.execute %{SELECT SIGHTED, PERSON, LOCATION
 			   FROM SIGHTINGS
-			   WHERE NAME = "#{flower_name}" or NAME = (SELECT COMNAME FROM FLOWERS 				   WHERE GENUS || ' ' || SPECIES = "#{flower_name}")
+			   WHERE NAME = '#{flower_name}' or NAME = (SELECT COMNAME FROM FLOWERS 				   WHERE GENUS || ' ' || SPECIES = "#{flower_name}")
 			   ORDER BY SIGHTED DESC
 			   LIMIT 10;}
-
-  puts "#{flower_name} has not been sighted!" if sightings.empty?
 
   sightings
 end
@@ -113,6 +114,9 @@ end
 # These methods assume the user cannot enter a blank input
 # Not sure if that needs to be caught here or elsewhere
 def update_flower_name(flower_name, new_name)
+  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
+  new_name = ActiveRecord::Base.sanitize_sql(new_name)
+
   $db.execute %{UPDATE FLOWERS
 		SET COMNAME = #{new_name}
 		WHERE COMNAME = #{flower_name}}
@@ -120,20 +124,26 @@ end
 
 
 def update_flower_genus(flower_name, genus_name)
-  $db.execute %{UPDATE FLOWERS
+  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
+  genus_name = ActiveRecord::Base.sanitize_sql(genus_name)
+
+ $db.execute %{UPDATE FLOWERS
 		SET GENUS = #{new_name}
 		WHERE COMNAME = #{flower_name}}
 end
 
 def update_flower_species(flower_name, species_name)
+  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
+  species_name = ActiveRecord::Base.sanitize_sql(genus_name)
+
   $db.execute %{UPDATE FLOWERS
 		SET SPECIES = #{species_name}
 		WHERE COMNAME = #{flower_name}}
 end
 
-
-
 def get_flower_info_query flower_name
+  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
+
   flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "#{flower_name}" }
   flower_info
 end
@@ -144,11 +154,10 @@ get '/' do
   flowers_result = $db.execute "select * from flowers"
 
   flowers_result.each do |row|
-    latin_name = row[0] + ' ' + row[1]
-    common_name = row[2]
-
-    @flowers.push( { :latin_name => latin_name, :common_name => common_name })
+    @flowers.push(flower_to_obj(row))
   end
+
+  @title = "Welcome!"
 
   erb :index, :layout => :layout
 end
@@ -158,10 +167,20 @@ get '/about' do
 end
 
 get '/flower/:flower_name' do
-  @flower = get_flower_info_query params[:flower_name]
-  @sightings = recent_sightings_query params[:flower_name]
+  @flower_row = get_flower_info_query params[:flower_name]
 
-  [@sightings, @flower].to_s
+  if (@flower_row.empty?)
+    redirect '/notfound'
+    return
+  end
+
+  @flower = flower_to_obj(@flower_row[0])
+  @flower[:image_url] = ImageSearcher::Client.new.search(query: params[:flower_name])[0]["tbUrl"]
+
+  @sightings = recent_sightings_query params[:flower_name]
+  @title = @flower[:common_name]
+
+  erb :flower, :layout => :layout
 end
 
 post '/signup' do
@@ -169,4 +188,15 @@ end
 
 post '/login' do
 
+end
+
+get '/notfound' do
+  erb :notfound, :layout => :layout
+end
+
+def flower_to_obj row
+  puts "hey", row.size
+  latin_name = row[0] + ' ' + row[1]
+  common_name = row[2]
+  { :latin_name => latin_name, :common_name => common_name }
 end
