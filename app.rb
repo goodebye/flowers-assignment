@@ -6,18 +6,18 @@ require "sqlite3"
 $db = SQLite3::Database.open "flowers.db"
 
 # Triggers and index
-$db.execute %{CREATE INDEX location
+$db.execute %{CREATE INDEX IF NOT EXISTS location
 	        ON SIGHTINGS(LOCATION);
 
-		CREATE INDEX name 
+		CREATE INDEX IF NOT EXISTS name
 		ON SIGHTINGS(NAME);
 
-		CREATE INDEX person
+		CREATE INDEX IF NOT EXISTS person
 		ON SIGHTINGS(PERSON);
 
-		CREATE INDEX sighted
+		CREATE INDEX IF NOT EXISTS sighted
 		ON SIGHTINGS(SIGHTED);
-		
+
 		CREATE TRIGGER flower_update
 		AFTER UPDATE OF COMNAME ON FLOWERS
 		BEGIN
@@ -45,8 +45,7 @@ $db.execute %{CREATE INDEX location
 		      FROM FLOWERS
 		      WHERE COMNAME = NEW.NAME OR GENUS || ' ' || SPECIES = NEW.NAME) IS NULL) 
 		      THEN RAISE (ABORT, 'Flower is not found')
-		END;
-		END;
+		END; END;
 
 		CREATE TRIGGER sci_name_change
 		AFTER INSERT ON SIGHTINGS
@@ -100,7 +99,7 @@ $db.execute %{CREATE INDEX location
 
 
 def recent_sightings_query flower_name
-  sightings = $db.execute %{SELECT SIGHTED, PERSON, LOCATION,
+  sightings = $db.execute %{SELECT SIGHTED, PERSON, LOCATION
 			   FROM SIGHTINGS
 			   WHERE NAME = "#{flower_name}" or NAME = (SELECT COMNAME FROM FLOWERS 				   WHERE GENUS || ' ' || SPECIES = "#{flower_name}")
 			   ORDER BY SIGHTED DESC
