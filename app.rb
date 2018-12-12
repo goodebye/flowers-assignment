@@ -4,6 +4,32 @@ require 'sqlite3'
 require 'image_searcher'
 require 'active_record'
 
+helpers do
+  def protected!
+    return if authorized?
+    headers['WWW-Authenticate'] = 'Basic realm="Restricted Area"'
+    halt 401, "Not authorized\n"
+  end
+
+  def authorized?
+    @auth ||=  Rack::Auth::Basic::Request.new(request.env)
+    @auth.provided? and @auth.basic? and @auth.credentials and @auth.credentials == ['admin', 'admin']
+  end
+end
+
+get '/' do
+  "Everybody can see this page"
+end
+
+post '/login' do
+
+end
+
+get '/protected' do
+  protected!
+  "Welcome, authenticated client"
+end
+
 $db = SQLite3::Database.open "flowers.db"
 
 # Triggers and index
@@ -148,6 +174,13 @@ def get_flower_info_query flower_name
   flower_info
 end
 
+def get_location_info_query location_name
+  location_name = ActiveRecord::Base.sanitize_sql(location_name)
+
+  location_info = $db.execute %{SELECT * FROM locations WHERE name = "#{location_name}"}
+  location_info
+end
+
 get '/' do
   @flowers = []
 
@@ -177,10 +210,23 @@ get '/flower/:flower_name' do
   @flower = flower_to_obj(@flower_row[0])
   @flower[:image_url] = ImageSearcher::Client.new.search(query: params[:flower_name])[0]["tbUrl"]
 
-  @sightings = recent_sightings_query params[:flower_name]
+  tmpsightings = recent_sightings_query params[:flower_name]
+
+  @sightings = []
+
+  tmpsightings.each do |row|
+    @sightings.push sighting_to_obj(row)
+  end
+
   @title = @flower[:common_name]
 
   erb :flower, :layout => :layout
+end
+
+get '/location/:location_name' do
+  @location = get_location_info_query params[:location_name]
+
+  @location
 end
 
 post '/signup' do
@@ -199,4 +245,10 @@ def flower_to_obj row
   latin_name = row[0] + ' ' + row[1]
   common_name = row[2]
   { :latin_name => latin_name, :common_name => common_name }
+end
+
+def sighting_to_obj row
+  { :date => row[0],
+    :person => row[1],
+    :location => row[2]}
 end
