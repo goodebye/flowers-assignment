@@ -29,13 +29,11 @@ $db.execute %{CREATE INDEX IF NOT EXISTS location
 
 		CREATE TRIGGER no_location
 		BEFORE INSERT ON SIGHTINGS
-		BEGIN
-		SELECT CASE
 		WHEN ((SELECT FEATURES.LOCATION
-		      FROM FEATURES
-		      WHERE FEATURES.LOCATION = NEW.LOCATION) IS NULL) 
-		      THEN RAISE (ABORT, 'Location is not found')
-		END;
+		FROM FEATURES
+		WHERE FEATURES.LOCATION = NEW.LOCATION) IS NULL) 
+		BEGIN INSERT INTO FEATURES(LOCATION, CLASS)
+		VALUES(NEW.LOCATION, 'UNKNOWN');
 		END;
 
 		CREATE TRIGGER no_flower
@@ -141,10 +139,16 @@ def update_flower_species(flower_name, species_name)
 		WHERE COMNAME = #{flower_name}}
 end
 
+def insert_new_sighting(flower_name, person_name, location, date)
+
+   $db.execute %{INSERT INTO SIGHTINGS(NAME, PERSON, LOCATION, SIGHTED)
+                 VALUES(#{flower_name}, #{person_name}, #{location}, #{date});}
+end
+
 def get_flower_info_query flower_name
   flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
 
-  flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "#{flower_name}" }
+  flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "{flower_name}"}
   flower_info
 end
 
@@ -187,7 +191,6 @@ post '/signup' do
 end
 
 post '/login' do
-
 end
 
 get '/notfound' do
