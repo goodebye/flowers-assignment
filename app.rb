@@ -17,10 +17,6 @@ helpers do
   end
 end
 
-get '/' do
-  "Everybody can see this page"
-end
-
 post '/login' do
 
 end
@@ -120,6 +116,26 @@ $db.execute %{CREATE INDEX IF NOT EXISTS location
 		      then
 		      RAISE(ABORT, 'Species is not found')
 		      END;
+		END;
+
+		CREATE TRIGGER no_flower_repeat
+		BEFORE INSERT ON FLOWERS
+		BEGIN 
+		SELECT CASE
+		WHEN((select GENUS 
+		      FROM FLOWERS
+		      WHERE GENUS LIKE NEW.GENUS) LIKE NEW.GENUS
+		     AND
+		     (SELECT SPECIES
+		      FROM FLOWERS
+		      WHERE SPECIES LIKE NEW.SPECIES) LIKE NEW.SPECIES
+		     AND
+		     (SELECT COMNAME
+		      FROM FLOWERS
+		      WHERE COMNAME LIKE NEW.COMNAME) LIKE NEW.COMNAME)
+		     THEN 
+		     RAISE(ABORT, 'Flower already exists!')
+		 END;
 		END;}
 
 
@@ -132,6 +148,28 @@ def recent_sightings_query flower_name
 			   ORDER BY SIGHTED DESC
 			   LIMIT 10;}
 
+  sightings
+end
+
+def recent_sightings_location location_name
+  location_name = ActiveRecord::Base.sanitize_sql(location_name)
+
+  sightings = $db.execute %{SELECT NAME, PERSON, SIGHTED
+				FROM SIGHTINGS
+				WHERE LOCATION = '#{location_name}'
+				ORDER BY SIGHTED DESC
+				LIMIT 10;}
+  sightings
+end
+
+def recent_sightings_name person
+  person = ActiveRecord::Base.sanitize_sql(person)
+
+  sightings = $db.execute %{SELECT NAME, LOCATION, SIGHTED
+				FROM SIGHTINGS
+				WHERE PERSON = '#{person}'
+				ORDER BY SIGHTED DESC
+				LIMIT 10;}
   sightings
 end
 
@@ -171,10 +209,16 @@ def insert_new_sighting(flower_name, person_name, location, date)
                  VALUES(#{flower_name}, #{person_name}, #{location}, #{date});}
 end
 
+def insert_new_flower(comname, genus, species)
+
+   $db.execute %{INSERT INTO FLOWERS(GENUS, SPECIES, COMNAME)
+                 VALUES(#{genus}, #{species}, #{comname});}
+end
+
 def get_flower_info_query flower_name
   flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
 
-  flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "{flower_name}"}
+  flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "#{flower_name}"}
   flower_info
 end
 
