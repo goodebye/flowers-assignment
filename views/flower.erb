@@ -5,39 +5,26 @@
             <div class="card-body">
                 <h5 class="card-title"><%= @flower[:common_name] %></h5>
                 <p class="card-text"><%= @flower[:latin_name]%></p>
-                <a href="#" class="btn btn-primary">Go somewhere</a>
             </div>
         </div>
     </div>
 
     <div class="col-sm">
-        <div id="flower info">
-        <%= @flower %>
-        </div>
-
        <div class="input-group mb-3">
             <input type="text" class="form-control" placeholder="Sighting location" aria-label="Sighting location" aria-describedby="button-addon2">
             <div class="input-group-append">
                 <button class="btn btn-outline-secondary" type="button" id="button-addon2">+</button>
             </div>
         </div>
-
-        <div id="sightings">
-
-        </div>
-
     </div>
 </div>
 <div class="container">
+    <h2> Recent Sightings: </h2>
+    <% @sightings.each do |sighting| %>
     <div class="row">
         <div class="col-sm">
-            One of three columns
-        </div>
-        <div class="col-sm">
-            One of three columns
-        </div>
-        <div class="col-sm">
-            One of three columns
+            Seen at <a href="/location/<%=sighting[:location]%>"><%= sighting[:location] %></a> by <a href="/person/<%=sighting[:person]%>"><%= sighting[:person] %></a> on <%= sighting[:date] %>
         </div>
     </div>
+    <% end %>
 </div>
