@@ -62,6 +62,19 @@ $db = SQLite3::Database.open "flowers.db"
 
 # Triggers and index
 $db.execute %{
+    CREATE INDEX IF NOT EXISTS location
+	        ON SIGHTINGS(LOCATION);
+
+		CREATE INDEX IF NOT EXISTS name
+		ON SIGHTINGS(NAME);
+
+		CREATE INDEX IF NOT EXISTS person
+		ON SIGHTINGS(PERSON);
+
+		CREATE INDEX IF NOT EXISTS sighted
+		ON SIGHTINGS(SIGHTED);
+
+
 		CREATE TRIGGER IF NOT EXISTS flower_update
 		AFTER UPDATE OF COMNAME ON FLOWERS
 		BEGIN
