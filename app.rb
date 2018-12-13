@@ -4,6 +4,8 @@ require 'sqlite3'
 require 'image_searcher'
 require 'active_record'
 
+$users = { "admin" => "admin"}
+
 helpers do
   def protected!
     return if authorized?
@@ -13,16 +15,51 @@ helpers do
 
   def authorized?
     @auth ||=  Rack::Auth::Basic::Request.new(request.env)
-    @auth.provided? and @auth.basic? and @auth.credentials and @auth.credentials == ['admin', 'admin']
+    @auth.provided? and @auth.basic? and @auth.credentials and $users.has_key?(@auth.credentials[0]) and $users[@auth.credentials[0]]== @auth.credentials[1]
+  end
+
+  def current_user
+    puts authorized?, @auth.credentials[0], "hmm"
+    if authorized?
+      return @auth.credentials[0]
+    end
+    ""
   end
 end
 
-get '/' do
-  "Everybody can see this page"
+before "*" do
+  puts current_user, "fuck off"
+  @user = current_user
 end
 
-post '/login' do
+post '/signup' do
+  if authorized?
+    redirect '/'
+  else
+    if !$users.has_key? params[:username]
+      $users[params[:username]] = params[:password]
 
+      redirect '/signup_redirect'
+    end
+  end
+end
+
+get '/signup_redirect' do
+  protected!
+
+  redirect '/'
+end
+
+get '/signup' do
+  if authorized?
+    redirect '/'
+  end
+
+  erb :signup, :layout => :layout
+end
+
+post '/signup' do
+  users[params[:username]] = params[:password]
 end
 
 get '/protected' do
@@ -229,19 +266,11 @@ get '/location/:location_name' do
   @location
 end
 
-post '/signup' do
-end
-
-post '/login' do
-
-end
-
 get '/notfound' do
   erb :notfound, :layout => :layout
 end
 
 def flower_to_obj row
-  puts "hey", row.size
   latin_name = row[0] + ' ' + row[1]
   common_name = row[2]
   { :latin_name => latin_name, :common_name => common_name }
