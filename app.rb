@@ -61,19 +61,8 @@ end
 $db = SQLite3::Database.open "flowers.db"
 
 # Triggers and index
-$db.execute %{CREATE INDEX IF NOT EXISTS location
-	        ON SIGHTINGS(LOCATION);
-
-		CREATE INDEX IF NOT EXISTS name
-		ON SIGHTINGS(NAME);
-
-		CREATE INDEX IF NOT EXISTS person
-		ON SIGHTINGS(PERSON);
-
-		CREATE INDEX IF NOT EXISTS sighted
-		ON SIGHTINGS(SIGHTED);
-
-		CREATE TRIGGER flower_update
+$db.execute %{
+		CREATE TRIGGER IF NOT EXISTS flower_update
 		AFTER UPDATE OF COMNAME ON FLOWERS
 		BEGIN
 		UPDATE SIGHTINGS
@@ -235,13 +224,13 @@ def update_flower_species(flower_name, species_name)
 		WHERE COMNAME = #{flower_name}}
 end
 
-def insert_new_sighting(flower_name, person_name, location, date)
-
+def insert_new_sighting(flower_name, person_name, location)
    $db.execute %{INSERT INTO SIGHTINGS(NAME, PERSON, LOCATION, SIGHTED)
-                 VALUES(#{flower_name}, #{person_name}, #{location}, #{date});}
+                 VALUES('#{flower_name}', '#{person_name}', '#{location}', DateTime('now'));}
 end
 
 def insert_new_flower(comname, genus, species)
+  puts "i've been calld", Random.rand(1000), comname
 
    $db.execute %{INSERT INTO FLOWERS(GENUS, SPECIES, COMNAME)
                  VALUES(#{genus}, #{species}, #{comname});}
@@ -279,7 +268,8 @@ get '/about' do
   "hello world!"
 end
 
-get '/flower/:flower_name' do
+get '/flower/:flower_url' do
+  params[:flower_name] = params[:flower_url].sub('_', ' ')
   @flower_row = get_flower_info_query params[:flower_name]
 
   if (@flower_row.empty?)
@@ -303,6 +293,23 @@ get '/flower/:flower_name' do
   erb :flower, :layout => :layout
 end
 
+post '/flower/sighting' do
+  protected!
+
+  @flower_row = get_flower_info_query params[:flower_name]
+
+  if (@flower_row.empty?)
+    redirect '/notfound'
+    return
+  end
+
+  @flower = flower_to_obj(@flower_row[0])
+
+  insert_new_sighting(@flower[:common_name], current_user, params[:location])
+
+  redirect %{/flower/#{@flower[:url]}}
+end
+
 get '/location/:location_name' do
   @location = get_location_info_query params[:location_name]
 
@@ -316,11 +323,12 @@ end
 def flower_to_obj row
   latin_name = row[0] + ' ' + row[1]
   common_name = row[2]
-  { :latin_name => latin_name, :common_name => common_name }
+  { :latin_name => latin_name, :common_name => common_name, :url => common_name.sub(' ', '_') }
 end
 
 def sighting_to_obj row
   { :date => row[0],
     :person => row[1],
-    :location => row[2]}
+    :location => row[2]
+  }
 end

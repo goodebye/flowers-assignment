@@ -11,10 +11,13 @@
 
     <div class="col-sm">
        <div class="input-group mb-3">
-            <input type="text" class="form-control" placeholder="Sighting location" aria-label="Sighting location" aria-describedby="button-addon2">
+           <form method="POST" action="/flower/sighting">
+            <input type="text" class="form-control" placeholder="Sighting location" aria-label="Sighting location" aria-describedby="button-addon2" name="location">
+            <input type="hidden" value="<%= @flower[:common_name]%>" name="flower_name">
             <div class="input-group-append">
-                <button class="btn btn-outline-secondary" type="button" id="button-addon2">+</button>
+                <button class="btn btn-outline-secondary" type="submit" id="button-addon2">+</button>
             </div>
+           </form>
         </div>
     </div>
 </div>
