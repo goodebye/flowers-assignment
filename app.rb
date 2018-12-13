@@ -201,8 +201,8 @@ def update_flower_name(flower_name, new_name)
   new_name = ActiveRecord::Base.sanitize_sql(new_name)
 
   $db.execute %{UPDATE FLOWERS
-		SET COMNAME = #{new_name}
-		WHERE COMNAME = #{flower_name}}
+		SET COMNAME = '#{new_name}'
+		WHERE COMNAME = '#{flower_name}'}
 end
 
 
@@ -211,8 +211,8 @@ def update_flower_genus(flower_name, genus_name)
   genus_name = ActiveRecord::Base.sanitize_sql(genus_name)
 
  $db.execute %{UPDATE FLOWERS
-		SET GENUS = #{new_name}
-		WHERE COMNAME = #{flower_name}}
+		SET GENUS = '#{new_name}'
+		WHERE COMNAME = '#{flower_name}'}
 end
 
 def update_flower_species(flower_name, species_name)
@@ -220,8 +220,8 @@ def update_flower_species(flower_name, species_name)
   species_name = ActiveRecord::Base.sanitize_sql(genus_name)
 
   $db.execute %{UPDATE FLOWERS
-		SET SPECIES = #{species_name}
-		WHERE COMNAME = #{flower_name}}
+		SET SPECIES = '#{species_name}'
+		WHERE COMNAME = '#{flower_name}'}
 end
 
 def insert_new_sighting(flower_name, person_name, location)
@@ -233,7 +233,7 @@ def insert_new_flower(comname, genus, species)
   puts "i've been calld", Random.rand(1000), comname
 
    $db.execute %{INSERT INTO FLOWERS(GENUS, SPECIES, COMNAME)
-                 VALUES(#{genus}, #{species}, #{comname});}
+                 VALUES('#{genus}', '#{species}','#{comname}');}
 end
 
 def get_flower_info_query flower_name
