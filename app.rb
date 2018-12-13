@@ -15,11 +15,10 @@ helpers do
 
   def authorized?
     @auth ||=  Rack::Auth::Basic::Request.new(request.env)
-    @auth.provided? and @auth.basic? and @auth.credentials and $users.has_key?(@auth.credentials[0]) and $users[@auth.credentials[0]]== @auth.credentials[1]
+    @auth.provided? and @auth.basic? and @auth.credentials and $users.has_key?(@auth.credentials[0]) and $users[@auth.credentials[0]] == @auth.credentials[1]
   end
 
   def current_user
-    puts authorized?, @auth.credentials[0], "hmm"
     if authorized?
       return @auth.credentials[0]
     end
@@ -50,21 +49,13 @@ get '/signup_redirect' do
   redirect '/'
 end
 
-get '/signup' do
-  if authorized?
-    redirect '/'
-  end
-
-  erb :signup, :layout => :layout
-end
-
-post '/signup' do
-  users[params[:username]] = params[:password]
-end
-
 get '/protected' do
   protected!
   "Welcome, authenticated client"
+end
+
+get '/signup' do
+  erb :signup, :layout => :layout
 end
 
 $db = SQLite3::Database.open "flowers.db"
@@ -92,13 +83,11 @@ $db.execute %{CREATE INDEX IF NOT EXISTS location
 
 		CREATE TRIGGER no_location
 		BEFORE INSERT ON SIGHTINGS
-		BEGIN
-		SELECT CASE
 		WHEN ((SELECT FEATURES.LOCATION
-		      FROM FEATURES
-		      WHERE FEATURES.LOCATION = NEW.LOCATION) IS NULL) 
-		      THEN RAISE (ABORT, 'Location is not found')
-		END;
+		FROM FEATURES
+		WHERE FEATURES.LOCATION = NEW.LOCATION) IS NULL) 
+		BEGIN INSERT INTO FEATURES(LOCATION, CLASS)
+		VALUES(NEW.LOCATION, 'UNKNOWN');
 		END;
 
 		CREATE TRIGGER no_flower
@@ -159,6 +148,26 @@ $db.execute %{CREATE INDEX IF NOT EXISTS location
 		      then
 		      RAISE(ABORT, 'Species is not found')
 		      END;
+		END;
+
+		CREATE TRIGGER no_flower_repeat
+		BEFORE INSERT ON FLOWERS
+		BEGIN 
+		SELECT CASE
+		WHEN((select GENUS 
+		      FROM FLOWERS
+		      WHERE GENUS LIKE NEW.GENUS) LIKE NEW.GENUS
+		     AND
+		     (SELECT SPECIES
+		      FROM FLOWERS
+		      WHERE SPECIES LIKE NEW.SPECIES) LIKE NEW.SPECIES
+		     AND
+		     (SELECT COMNAME
+		      FROM FLOWERS
+		      WHERE COMNAME LIKE NEW.COMNAME) LIKE NEW.COMNAME)
+		     THEN 
+		     RAISE(ABORT, 'Flower already exists!')
+		 END;
 		END;}
 
 
@@ -171,6 +180,28 @@ def recent_sightings_query flower_name
 			   ORDER BY SIGHTED DESC
 			   LIMIT 10;}
 
+  sightings
+end
+
+def recent_sightings_location location_name
+  location_name = ActiveRecord::Base.sanitize_sql(location_name)
+
+  sightings = $db.execute %{SELECT NAME, PERSON, SIGHTED
+				FROM SIGHTINGS
+				WHERE LOCATION = '#{location_name}'
+				ORDER BY SIGHTED DESC
+				LIMIT 10;}
+  sightings
+end
+
+def recent_sightings_name person
+  person = ActiveRecord::Base.sanitize_sql(person)
+
+  sightings = $db.execute %{SELECT NAME, LOCATION, SIGHTED
+				FROM SIGHTINGS
+				WHERE PERSON = '#{person}'
+				ORDER BY SIGHTED DESC
+				LIMIT 10;}
   sightings
 end
 
@@ -204,10 +235,22 @@ def update_flower_species(flower_name, species_name)
 		WHERE COMNAME = #{flower_name}}
 end
 
+def insert_new_sighting(flower_name, person_name, location, date)
+
+   $db.execute %{INSERT INTO SIGHTINGS(NAME, PERSON, LOCATION, SIGHTED)
+                 VALUES(#{flower_name}, #{person_name}, #{location}, #{date});}
+end
+
+def insert_new_flower(comname, genus, species)
+
+   $db.execute %{INSERT INTO FLOWERS(GENUS, SPECIES, COMNAME)
+                 VALUES(#{genus}, #{species}, #{comname});}
+end
+
 def get_flower_info_query flower_name
   flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
 
-  flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "#{flower_name}" }
+  flower_info = $db.execute %{SELECT * FROM FLOWERS WHERE GENUS || ' ' || SPECIES = "#{flower_name}" OR COMNAME = "#{flower_name}"}
   flower_info
 end
 
