@@ -5,6 +5,7 @@
             <div class="card-body">
                 <h5 class="card-title"><%= @flower[:common_name] %></h5>
                 <p class="card-text"><%= @flower[:latin_name]%></p>
+                <a href="/flower/<%= @flower[:url]%>/edit" class="btn btn-primary">Edit</a>
             </div>
         </div>
     </div>

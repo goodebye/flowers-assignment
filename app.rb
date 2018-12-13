@@ -81,14 +81,6 @@ $db.execute %{CREATE TRIGGER IF NOT EXISTS flower_update
 		WHERE NAME = OLD.COMNAME;
 		END;}			
 
-$db.execute %{CREATE TRIGGER IF NOT EXISTS flower_update
-		AFTER UPDATE OF COMNAME ON FLOWERS
-		BEGIN
-		UPDATE SIGHTINGS
-		SET NAME = NEW.COMNAME
-		WHERE NAME = OLD.COMNAME;
-		END;}
-
 $db.execute %{CREATE TRIGGER IF NOT EXISTS no_location
 		BEFORE INSERT ON SIGHTINGS
 		WHEN ((SELECT FEATURES.LOCATION
@@ -123,42 +115,6 @@ $db.execute %{CREATE TRIGGER IF NOT EXISTS sci_name_change
 				  WHERE NAME = NEW.NAME;
 		END;}
 
-$db.execute %{CREATE TRIGGER IF NOT EXISTS ud_no_flower
-		BEFORE UPDATE ON FLOWERS
-		BEGIN
-		SELECT CASE
-		WHEN((SELECT COMNAME
-		      FROM FLOWERS
-		      WHERE COMNAME = NEW.NAME) is NULL)
-		      then
-		      RAISE(ABORT, 'Flower is not found')
-		      END;
-		END;}
-		
-$db.execute %{CREATE TRIGGER IF NOT EXISTS ud_no_genus
-		BEFORE UPDATE ON FLOWERS
-		BEGIN
-		SELECT CASE
-		WHEN((SELECT GENUS
-		      FROM FLOWERS
-		      WHERE GENUS = NEW.GENUS) is NULL)
-		      then
-		      RAISE(ABORT, 'Genus is not found')
-		      END;
-		END;}
-		
-$db.execute %{CREATE TRIGGER IF NOT EXISTS ud_no_specices
-		BEFORE UPDATE ON FLOWERS
-		BEGIN
-		SELECT CASE
-		WHEN((SELECT SPECIES
-		      FROM FLOWERS
-		      WHERE SPECIES = NEW.SPECIES) is NULL)
-		      then
-		      RAISE(ABORT, 'Species is not found')
-		      END;
-		END;}
-		
 $db.execute %{CREATE TRIGGER IF NOT EXISTS no_flower_repeat
 		BEFORE INSERT ON FLOWERS
 		BEGIN 
@@ -223,43 +179,26 @@ end
 
 # These methods assume the user cannot enter a blank input
 # Not sure if that needs to be caught here or elsewhere
-def update_flower_name(flower_name, new_name)
-  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
+def update_flower_name(old_name, genus, species, new_name)
+  old_name = ActiveRecord::Base.sanitize_sql(old_name)
+  genus = ActiveRecord::Base.sanitize_sql(genus)
+  species = ActiveRecord::Base.sanitize_sql(species)
   new_name = ActiveRecord::Base.sanitize_sql(new_name)
 
   $db.execute %{UPDATE FLOWERS
-		SET COMNAME = '#{new_name}'
-		WHERE COMNAME = '#{flower_name}'}
-end
-
-
-def update_flower_genus(flower_name, genus_name)
-  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
-  genus_name = ActiveRecord::Base.sanitize_sql(genus_name)
-
- $db.execute %{UPDATE FLOWERS
-		SET GENUS = '#{new_name}'
-		WHERE COMNAME = '#{flower_name}'}
-end
-
-def update_flower_species(flower_name, species_name)
-  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
-  species_name = ActiveRecord::Base.sanitize_sql(genus_name)
-
-  $db.execute %{UPDATE FLOWERS
-		SET SPECIES = '#{species_name}'
-		WHERE COMNAME = '#{flower_name}'}
+		SET COMNAME = '#{new_name}', GENUS = '#{genus}', SPECIES = '#{species}'
+		WHERE COMNAME = '#{old_name}';}
 end
 
 def insert_new_sighting(flower_name, person_name, location)
+  flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
+  person_name = ActiveRecord::Base.sanitize_sql(person_name)
+  location = ActiveRecord::Base.sanitize_sql(location)
+
    $db.execute %{INSERT INTO SIGHTINGS(NAME, PERSON, LOCATION, SIGHTED)
                  VALUES('#{flower_name}', '#{person_name}', '#{location}', DateTime('now'));}
 end
 
-def insert_new_flower(comname, genus, species)
-   $db.execute %{INSERT INTO FLOWERS(GENUS, SPECIES, COMNAME)
-                 VALUES('#{genus}', '#{species}','#{comname}');}
-end
 
 def get_flower_info_query flower_name
   flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
@@ -331,6 +270,36 @@ post '/flower/sighting' do
   redirect %{/flower/#{@flower[:url]}}
 end
 
+get '/flower/:flower_url/edit' do
+  protected!
+  params[:flower_name] = params[:flower_url].gsub('_', ' ')
+  @flower_row = get_flower_info_query params[:flower_name]
+
+  if (@flower_row.empty?)
+    redirect '/notfound'
+    return
+  end
+
+  @flower = flower_to_obj(@flower_row[0])
+  @flower[:image_url] = ImageSearcher::Client.new.search(query: params[:flower_name])[0]["tbUrl"]
+
+  @title = "#{@flower[:common_name]} - edit!"
+
+  erb :floweredit, :layout => :layout
+end
+
+post '/flower/:flower_url/edit' do
+  protected!
+
+  update_flower_name(params[:old_common_name], params[:genus], params[:species], params[:common_name])
+
+  puts "i ran lol"
+
+  redirect "/flower/#{params[:common_name].gsub(' ', '_')}"
+end
+
+
+
 get '/location/:location_name' do
   params[:location_name] = params[:location_name].gsub('_', ' ')
   loc_row = get_location_info_query params[:location_name].gsub('_', ' ')
@@ -347,6 +316,8 @@ get '/location/:location_name' do
      @sightings.push location_sighting_to_obj(row)
    end
 
+  @title = "Location - #{params[:location_name]}"
+
   erb :location, :layout => :layout
 end
 
@@ -361,11 +332,20 @@ get '/person/:person_name' do
 
   sightings_rows = person_sightings_query params[:person_name]
 
+  if (sightings_rows.empty?)
+    redirect '/notfound'
+    return
+  end
+
+
+
   @sightings = []
 
   sightings_rows.each do |row| 
     @sightings.push(person_to_obj row)
   end
+
+  @title = "Person - #{params[:person_name]}"
 
   erb :person, :layout => :layout
 end
