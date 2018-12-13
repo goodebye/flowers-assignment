@@ -61,38 +61,44 @@ end
 $db = SQLite3::Database.open "flowers.db"
 
 # Triggers and index
-$db.execute %{
-    CREATE INDEX IF NOT EXISTS location
-	        ON SIGHTINGS(LOCATION);
+$db.execute %{CREATE INDEX IF NOT EXISTS location
+	        ON SIGHTINGS(LOCATION);}
 
-		CREATE INDEX IF NOT EXISTS name
-		ON SIGHTINGS(NAME);
+$db.execute %{CREATE INDEX IF NOT EXISTS name
+		ON SIGHTINGS(NAME);}
 
-		CREATE INDEX IF NOT EXISTS person
-		ON SIGHTINGS(PERSON);
+$db.execute %{CREATE INDEX IF NOT EXISTS person
+		ON SIGHTINGS(PERSON);}
 
-		CREATE INDEX IF NOT EXISTS sighted
-		ON SIGHTINGS(SIGHTED);
+$db.execute %{CREATE INDEX IF NOT EXISTS sighted
+		ON SIGHTINGS(SIGHTED);}		
 
-
-		CREATE TRIGGER IF NOT EXISTS flower_update
+$db.execute %{CREATE TRIGGER IF NOT EXISTS flower_update
 		AFTER UPDATE OF COMNAME ON FLOWERS
 		BEGIN
 		UPDATE SIGHTINGS
 		SET NAME = NEW.COMNAME
 		WHERE NAME = OLD.COMNAME;
-		END;
+		END;}			
 
-		CREATE TRIGGER no_location
+$db.execute %{CREATE TRIGGER IF NOT EXISTS flower_update
+		AFTER UPDATE OF COMNAME ON FLOWERS
+		BEGIN
+		UPDATE SIGHTINGS
+		SET NAME = NEW.COMNAME
+		WHERE NAME = OLD.COMNAME;
+		END;}
+
+$db.execute %{CREATE TRIGGER IF NOT EXISTS no_location
 		BEFORE INSERT ON SIGHTINGS
 		WHEN ((SELECT FEATURES.LOCATION
 		FROM FEATURES
 		WHERE FEATURES.LOCATION = NEW.LOCATION) IS NULL) 
 		BEGIN INSERT INTO FEATURES(LOCATION, CLASS)
 		VALUES(NEW.LOCATION, 'UNKNOWN');
-		END;
-
-		CREATE TRIGGER no_flower
+		END;}
+		
+$db.execute %{CREATE TRIGGER IF NOT EXISTS no_flower
 		BEFORE INSERT ON SIGHTINGS
 		BEGIN
 		SELECT CASE
@@ -100,9 +106,10 @@ $db.execute %{
 		      FROM FLOWERS
 		      WHERE COMNAME = NEW.NAME OR GENUS || ' ' || SPECIES = NEW.NAME) IS NULL) 
 		      THEN RAISE (ABORT, 'Flower is not found')
-		END; END;
-
-		CREATE TRIGGER sci_name_change
+		END; 
+		END;}
+		
+$db.execute %{CREATE TRIGGER IF NOT EXISTS sci_name_change
 		AFTER INSERT ON SIGHTINGS
 		WHEN((SELECT GENUS || ' ' || SPECIES
 				  FROM FLOWERS
@@ -114,9 +121,9 @@ $db.execute %{
 				              FROM FLOWERS
 				              WHERE GENUS || ' ' || SPECIES = NEW.NAME)
 				  WHERE NAME = NEW.NAME;
-		END;
-
-		CREATE TRIGGER ud_no_flower
+		END;}
+		
+$db.execute %{CREATE TRIGGER IF NOT EXISTS ud_no_flower
 		BEFORE UPDATE ON FLOWERS
 		BEGIN
 		SELECT CASE
@@ -126,9 +133,9 @@ $db.execute %{
 		      then
 		      RAISE(ABORT, 'Flower is not found')
 		      END;
-		END;
-
-		CREATE TRIGGER ud_no_genus
+		END;}
+		
+$db.execute %{CREATE TRIGGER IF NOT EXISTS ud_no_genus
 		BEFORE UPDATE ON FLOWERS
 		BEGIN
 		SELECT CASE
@@ -138,9 +145,9 @@ $db.execute %{
 		      then
 		      RAISE(ABORT, 'Genus is not found')
 		      END;
-		END;
-
-		CREATE TRIGGER ud_no_specices
+		END;}
+		
+$db.execute %{CREATE TRIGGER IF NOT EXISTS ud_no_specices
 		BEFORE UPDATE ON FLOWERS
 		BEGIN
 		SELECT CASE
@@ -150,9 +157,9 @@ $db.execute %{
 		      then
 		      RAISE(ABORT, 'Species is not found')
 		      END;
-		END;
-
-		CREATE TRIGGER no_flower_repeat
+		END;}
+		
+$db.execute %{CREATE TRIGGER IF NOT EXISTS no_flower_repeat
 		BEFORE INSERT ON FLOWERS
 		BEGIN 
 		SELECT CASE
@@ -171,7 +178,6 @@ $db.execute %{
 		     RAISE(ABORT, 'Flower already exists!')
 		 END;
 		END;}
-
 
 def recent_sightings_query flower_name
   flower_name = ActiveRecord::Base.sanitize_sql(flower_name)
