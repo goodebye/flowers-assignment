@@ -1,7 +1,7 @@
 <div class ="row">
-    <div class="col-sm"
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="<%= @flower[:image_url]%>" alt="Card image cap">
+    <div class="col-sm">
+        <div class="card" style="width: 250px;">
+            <img class="card-img-top" style="width: 100%" src="<%= @flower[:image_url]%>" alt="Card image cap">
             <div class="card-body">
                 <h5 class="card-title"><%= @flower[:common_name] %></h5>
                 <p class="card-text"><%= @flower[:latin_name]%></p>
@@ -10,24 +10,27 @@
     </div>
 
     <div class="col-sm">
+
+        <form method="POST" action="/flower/sighting">
        <div class="input-group mb-3">
-           <form method="POST" action="/flower/sighting">
-            <input type="text" class="form-control" placeholder="Sighting location" aria-label="Sighting location" aria-describedby="button-addon2" name="location">
+            <input type="text" class="form-control input-group-prepend" placeholder="Sighting location" aria-label="Sighting location" aria-describedby="button-addon2" name="location" >
             <input type="hidden" value="<%= @flower[:common_name]%>" name="flower_name">
             <div class="input-group-append">
-                <button class="btn btn-outline-secondary" type="submit" id="button-addon2">+</button>
+                <button class="btn btn-secondary" type="submit" id="button-addon2">+</button>
             </div>
-           </form>
         </div>
+
+        </form>
+        <h2> Recent Sightings: </h2>
+        <% @sightings.each do |sighting| %>
+            <div class="row">
+                <div class="col-sm">
+                    Seen at <a href="/location/<%=sighting[:location]%>"><%= sighting[:location] %></a> by <a href="/person/<%=sighting[:person]%>"><%= sighting[:person] %></a> on <%= sighting[:date] %>
+                </div>
+            </div>
+        <% end %>
+
     </div>
 </div>
 <div class="container">
-    <h2> Recent Sightings: </h2>
-    <% @sightings.each do |sighting| %>
-    <div class="row">
-        <div class="col-sm">
-            Seen at <a href="/location/<%=sighting[:location]%>"><%= sighting[:location] %></a> by <a href="/person/<%=sighting[:person]%>"><%= sighting[:person] %></a> on <%= sighting[:date] %>
-        </div>
-    </div>
-    <% end %>
 </div>

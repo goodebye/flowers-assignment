@@ -1,6 +1,7 @@
-<ul>
-<% @flowers.each do |flower| %>
-    <li>latin name: <%= flower[:latin_name] %>, common name: <a href="/flower/<%= flower[:url] %>"> <%= flower[:common_name] %></a>
-    </li>
+<% @flowers.each_slice(3) do |flower_row| %>
+    <div class="row">
+    <% flower_row.each do |flower| %>
+        <div class="col-sm"><a href="/flower/<%= flower[:url] %>"> <%= flower[:common_name] %></a><br/> <%= flower[:latin_name] %></div>
+    <% end %>
+  </div>
 <% end %>
-</ul>
