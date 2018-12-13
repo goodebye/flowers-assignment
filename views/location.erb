@@ -1,0 +1,24 @@
+<div class ="row">
+    <div class="col-sm">
+        <div class="card" style="width: 250px;">
+            <div class="card-body">
+                <h5 class="card-title"><%= @location[:location] %></h5>
+                <p class="card-text"><%= @location[:feature_class]%></p>
+                <p class="card-text"><%= @location[:latitude]%>, <%= @location[:latitude]%></p>
+                <p class="card-text"><%= @location[:map]%></p>
+                <p class="card-text"><%= @location[:elev]%></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm">
+        <h2> Recent Sightings: </h2>
+        <% @sightings.each do |sighting| %>
+            <div class="row">
+                <div class="col-sm">
+                    <a href="/flower/<%=sighting[:flower_url]%>"><%= sighting[:name] %></a> was seen here by <a href="/person/<%=sighting[:person]%>"><%= sighting[:person] %></a> on <%= sighting[:date] %>
+                </div>
+            </div>
+        <% end %>
+    </div>
+</div>
+

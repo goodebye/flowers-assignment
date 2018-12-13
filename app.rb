@@ -113,8 +113,8 @@ $db.execute %{CREATE TRIGGER IF NOT EXISTS sci_name_change
 		AFTER INSERT ON SIGHTINGS
 		WHEN((SELECT GENUS || ' ' || SPECIES
 				  FROM FLOWERS
-				  WHERE GENUS =  substr(NEW.NAME, 1, instr(NEW.NAME, ' ') - 1) 
-				  AND SPECIES = substr(NEW.NAME, instr(NEW.NAME, ' ') + 1)) == NEW.NAME)
+				  WHERE GENUS = substr(NEW.NAME, 1, instr(NEW.NAME, ' ') - 1) 
+				  AND SPECIES =substr(NEW.NAME, instr(NEW.NAME, ' ') + 1)) == NEW.NAME)
 				  BEGIN	
 				  UPDATE SIGHTINGS
 				  SET NAME = (SELECT COMNAME
@@ -122,7 +122,7 @@ $db.execute %{CREATE TRIGGER IF NOT EXISTS sci_name_change
 				              WHERE GENUS || ' ' || SPECIES = NEW.NAME)
 				  WHERE NAME = NEW.NAME;
 		END;}
-		
+
 $db.execute %{CREATE TRIGGER IF NOT EXISTS ud_no_flower
 		BEFORE UPDATE ON FLOWERS
 		BEGIN
@@ -191,6 +191,14 @@ def recent_sightings_query flower_name
   sightings
 end
 
+def person_sightings_query person_name
+  person_name = ActiveRecord::Base.sanitize_sql(person_name)
+
+  sightings = $db.execute %{SELECT * FROM SIGHTINGS WHERE PERSON = '#{person_name}'}
+
+  sightings
+end
+
 def recent_sightings_location location_name
   location_name = ActiveRecord::Base.sanitize_sql(location_name)
 
@@ -249,8 +257,6 @@ def insert_new_sighting(flower_name, person_name, location)
 end
 
 def insert_new_flower(comname, genus, species)
-  puts "i've been calld", Random.rand(1000), comname
-
    $db.execute %{INSERT INTO FLOWERS(GENUS, SPECIES, COMNAME)
                  VALUES('#{genus}', '#{species}','#{comname}');}
 end
@@ -265,7 +271,7 @@ end
 def get_location_info_query location_name
   location_name = ActiveRecord::Base.sanitize_sql(location_name)
 
-  location_info = $db.execute %{SELECT * FROM locations WHERE name = "#{location_name}"}
+  location_info = $db.execute %{SELECT * FROM features WHERE location = "#{location_name}"}
   location_info
 end
 
@@ -283,12 +289,8 @@ get '/' do
   erb :index, :layout => :layout
 end
 
-get '/about' do
-  "hello world!"
-end
-
 get '/flower/:flower_url' do
-  params[:flower_name] = params[:flower_url].sub('_', ' ')
+  params[:flower_name] = params[:flower_url].gsub('_', ' ')
   @flower_row = get_flower_info_query params[:flower_name]
 
   if (@flower_row.empty?)
@@ -330,24 +332,98 @@ post '/flower/sighting' do
 end
 
 get '/location/:location_name' do
-  @location = get_location_info_query params[:location_name]
+  params[:location_name] = params[:location_name].gsub('_', ' ')
+  loc_row = get_location_info_query params[:location_name].gsub('_', ' ')
 
-  @location
+  if (loc_row.empty?)
+    redirect '/notfound'
+    return
+  end
+
+  @location = location_to_obj(loc_row[0])
+
+  @sightings = []
+  (recent_sightings_location params[:location_name]).each do |row|
+     @sightings.push location_sighting_to_obj(row)
+   end
+
+  erb :location, :layout => :layout
 end
 
 get '/notfound' do
   erb :notfound, :layout => :layout
 end
 
+get '/person/:person_name' do
+  params[:person_name] = params[:person_name].gsub('_', ' ')
+
+  @person = params[:person_name]
+
+  sightings_rows = person_sightings_query params[:person_name]
+
+  @sightings = []
+
+  sightings_rows.each do |row| 
+    @sightings.push(person_to_obj row)
+  end
+
+  erb :person, :layout => :layout
+end
+
 def flower_to_obj row
   latin_name = row[0] + ' ' + row[1]
   common_name = row[2]
-  { :latin_name => latin_name, :common_name => common_name, :url => common_name.sub(' ', '_') }
+  { :latin_name => latin_name, :common_name => common_name, :url => common_name.gsub(' ', '_') }
 end
 
 def sighting_to_obj row
   { :date => row[0],
     :person => row[1],
-    :location => row[2]
+    :location => row[2],
+    :location_url => row[2].gsub(' ', '_')
+  }
+end
+
+def person_to_obj row
+  { :name => row[0],
+    :flower_url => row[0].gsub(' ', '_'),
+    :person => row[1],
+    :location => row[2],
+    :location_url => row[2].gsub(' ', '_'),
+    :date => row[3]
+  }
+end
+
+def location_sighting_to_obj row
+  { :name => row[0],
+    :flower_url => row[0].gsub(' ','_'),
+    :person => row[1],
+    :date => row[2]
+  }
+end
+
+def location_to_obj row
+  if row[2].nil?
+    row[2] = "Unknown latitude"
+  end
+  if row[3].nil?
+    row[3] = "Unknown longitude"
+  end
+  if row[4].nil?
+    row[4] = "Unknown map"
+  end
+  if row[5].nil?
+    row[5] = "Unknown elevation"
+  else
+    row[5] = "#{row[5] } ft"
+  end
+
+  {
+  location: row[0],
+  feature_class:  row[1],
+  latitude: row[2],
+  longitude: row[3],
+  map: row[4],
+  elev: row[5]
   }
 end

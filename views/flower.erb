@@ -25,7 +25,7 @@
         <% @sightings.each do |sighting| %>
             <div class="row">
                 <div class="col-sm">
-                    Seen at <a href="/location/<%=sighting[:location]%>"><%= sighting[:location] %></a> by <a href="/person/<%=sighting[:person]%>"><%= sighting[:person] %></a> on <%= sighting[:date] %>
+                    Seen at <a href="/location/<%=sighting[:location_url]%>"><%= sighting[:location] %></a> by <a href="/person/<%=sighting[:person]%>"><%= sighting[:person] %></a> on <%= sighting[:date] %>
                 </div>
             </div>
         <% end %>
